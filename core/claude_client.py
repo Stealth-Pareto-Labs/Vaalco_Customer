@@ -14,11 +14,10 @@ answers; it never computes numbers — those come from the tools.
 """
 
 import json
-import urllib.request
-import urllib.error
 
 import config
 import analysis
+import llm
 
 
 def _fn(name, description, properties=None, required=None):
@@ -142,49 +141,18 @@ def _system_prompt():
         return SYSTEM_PROMPT_BASE + "(no data loaded yet)"
 
 
-def _call_openai(messages):
-    body = {"model": config.MODEL, "max_tokens": config.MAX_TOKENS,
-            "messages": messages, "tools": TOOLS}
-    req = urllib.request.Request(
-        "https://api.openai.com/v1/chat/completions",
-        data=json.dumps(body).encode(),
-        headers={"content-type": "application/json",
-                 "authorization": f"Bearer {config.OPENAI_API_KEY}"},
-        method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=90) as resp:
-            return json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        raise RuntimeError(f"OpenAI API error {e.code}: {e.read().decode(errors='replace')}")
-
-
 def answer_question(user_message, history=None):
     if not config.api_key_present():
-        return {"answer": ("No OpenAI API key is set. Open app/config.py and paste your key "
-                           "on the OPENAI_API_KEY line, then restart."), "trace": []}
-    messages = [{"role": "system", "content": _system_prompt()}]
-    messages += list(history or [])
-    messages.append({"role": "user", "content": user_message})
-    trace = []
-    charts = []
-    for _ in range(config.MAX_TOOL_ROUNDS):
-        data = _call_openai(messages)
-        msg = data["choices"][0]["message"]
-        tool_calls = msg.get("tool_calls")
-        if not tool_calls:
-            return {"answer": (msg.get("content") or "").strip(), "trace": trace, "charts": charts}
-        messages.append(msg)
-        for tc in tool_calls:
-            name = tc["function"]["name"]
-            try:
-                args = json.loads(tc["function"].get("arguments") or "{}")
-            except json.JSONDecodeError:
-                args = {}
-            trace.append({"tool": name, "arguments": args})
-            result = analysis.run_tool(name, args)
-            # if a tool produced a chart spec, hand it to the UI to render
-            if isinstance(result, dict) and "chart" in result:
-                charts.append(result["chart"])
-            messages.append({"role": "tool", "tool_call_id": tc["id"],
-                             "content": json.dumps(result)})
-    return {"answer": "I couldn't complete that within the step limit.", "trace": trace, "charts": charts}
+        return {"answer": ("No LLM API key is set. Set ANTHROPIC_API_KEY (or OPENAI_API_KEY "
+                           "with LLM_PROVIDER=openai) in the environment."), "trace": []}
+    # The tool set (TOOLS), the system prompt (_system_prompt), and the
+    # deterministic tool runner (analysis.run_tool) are unchanged. Only the
+    # provider transport lives in llm.py, selected by config.LLM_PROVIDER.
+    return llm.run_tool_conversation(
+        system=_system_prompt(),
+        history=history,
+        user_message=user_message,
+        tools=TOOLS,
+        tool_runner=analysis.run_tool,
+        max_rounds=config.MAX_TOOL_ROUNDS,
+    )

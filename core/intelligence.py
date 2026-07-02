@@ -25,11 +25,10 @@ import os
 import json
 import time
 import datetime
-import urllib.request
-import urllib.error
 
 import config
 import signals
+import llm
 
 
 # ---------------------------------------------------------------------------
@@ -108,30 +107,9 @@ def _call_model(payload_signals, context):
         "signals": slim,
     }
     system = _SYNTH_SYSTEM.format(operator=config.OPERATOR_NAME)
-    body = {
-        "model": config.MODEL,
-        "max_tokens": config.INTEL_MAX_TOKENS,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": json.dumps(user)},
-        ],
-        "response_format": {"type": "json_object"},
-    }
-    req = urllib.request.Request(
-        "https://api.openai.com/v1/chat/completions",
-        data=json.dumps(body).encode(),
-        headers={"content-type": "application/json",
-                 "authorization": f"Bearer {config.OPENAI_API_KEY}"},
-        method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            data = json.loads(resp.read())
-        content = data["choices"][0]["message"].get("content") or "{}"
-        return json.loads(content)
-    except (urllib.error.HTTPError, urllib.error.URLError, KeyError,
-            json.JSONDecodeError, TimeoutError) as e:
-        print(f"  ! intelligence model call failed ({e}); using deterministic fallback.")
-        return None
+    # Transport is provider-abstracted (llm.py); the prompt and the strict
+    # JSON contract above are unchanged. Returns a dict or None (fallback).
+    return llm.complete_json(system, json.dumps(user), config.INTEL_MAX_TOKENS)
 
 
 # ---------------------------------------------------------------------------
