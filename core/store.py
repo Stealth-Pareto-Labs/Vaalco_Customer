@@ -144,6 +144,19 @@ def upsert_daily_record(record, raw_report_id=None,
         )
 
 
+def load_daily_records(vessel_id=DEFAULT_VESSEL_ID):
+    """Return stored day records for a vessel (to feed analysis.load()).
+    Returns None in file mode so the caller falls back to parsing the folder."""
+    if not _supabase():
+        return None
+    with _pg() as c:
+        rows = c.execute(
+            "select payload from public.daily_records where vessel_id=%s order by report_date",
+            (vessel_id,),
+        ).fetchall()
+    return [r[0] for r in rows]
+
+
 def record_raw_report(source_file, storage_path, file_hash, report_date=None,
                       status="parsed", error=None,
                       vessel_id=DEFAULT_VESSEL_ID, tenant_id=DEFAULT_TENANT_ID):

@@ -1,0 +1,22 @@
+# FastAPI backend for Render. Bundles the shared core + the API app.
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Install deps first for layer caching
+COPY apps/api/requirements.txt /app/apps/api/requirements.txt
+RUN pip install --no-cache-dir -r /app/apps/api/requirements.txt
+
+# Copy the code the API needs
+COPY core/ /app/core/
+COPY apps/api/ /app/apps/api/
+
+# Sample reports let the service run in file mode if STORAGE_BACKEND=file
+COPY reports/ /app/reports/
+
+EXPOSE 8000
+# Render provides $PORT; default to 8000 locally.
+CMD ["sh", "-c", "uvicorn apps.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

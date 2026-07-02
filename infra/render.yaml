@@ -1,0 +1,47 @@
+# Render Blueprint — FastAPI backend (Docker).
+# Deploy: connect this repo in Render (one-time GitHub authorization), then
+# `render blueprint launch`, or create the service via the Render API. Secrets
+# (sync:false) are set as environment variables in the Render dashboard/API.
+services:
+  - type: web
+    name: vaalco-api
+    runtime: docker
+    dockerfilePath: ./infra/Dockerfile.api
+    dockerContext: .
+    plan: starter
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: LLM_PROVIDER
+        value: anthropic
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-5
+      - key: STORAGE_BACKEND
+        value: supabase
+      - key: OPERATOR_NAME
+        value: VAALCO Energy
+      - key: VESSEL_LABEL
+        value: Navigator Z (NZ-MCT)
+      - key: FIELD_LABEL
+        value: ETAME Field, Offshore Gabon
+      - key: MGO_PRICE_PER_M3
+        value: "730"
+      - key: FRONTEND_ORIGIN
+        value: "*"
+      # ---- secrets (set in dashboard/API; never committed) ----
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: ACCESS_CODE
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
