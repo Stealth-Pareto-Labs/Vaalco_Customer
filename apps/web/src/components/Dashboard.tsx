@@ -287,10 +287,6 @@ export default function Dashboard({ active }: { active: boolean }) {
       highlight: key.toLowerCase().includes("near miss")
     }));
 
-  const net = kpis.net_cost_impact_usd;
-  const netColor = net > 0 ? C.hi : net < 0 ? C.lo : C.mut;
-  const signSym = (n: number) => (n > 0 ? "+" : n < 0 ? "−" : "");
-
   return (
     <div className="space-y-8 py-4">
       {/* Meta strip */}
@@ -307,7 +303,7 @@ export default function Dashboard({ active }: { active: boolean }) {
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         <KpiCard
           label={t("dashboard.kpi.avgFuel")}
           value={`${num(kpis.mean_daily_fuel_L)} ${t("dashboard.unit.L")}`}
@@ -317,14 +313,6 @@ export default function Dashboard({ active }: { active: boolean }) {
           label={t("dashboard.kpi.annualCost")}
           value={usdCompact(kpis.annualised_cost_usd)}
           sub={`$${num(kpis.annualised_cost_usd)}`}
-        />
-        <KpiCard
-          label={t("dashboard.kpi.netVsModel")}
-          value={`${signSym(net)}$${num(Math.abs(net))}`}
-          valueColor={netColor}
-          sub={`${signSym(kpis.net_deviation_L)}${num(Math.abs(kpis.net_deviation_L))} ${t("dashboard.unit.L")} · ${
-            net > 0 ? t("dashboard.kpi.overspent") : t("dashboard.kpi.saved")
-          }`}
         />
         <KpiCard label={t("dashboard.kpi.openSignals")} value={String(counts.total)}>
           <div className="mt-2 flex items-center gap-1.5">
