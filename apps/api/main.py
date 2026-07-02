@@ -65,6 +65,16 @@ def refresh_data():
     return _state["days"]
 
 
+def ensure_loaded():
+    """Lazy self-heal: load data if this (possibly cold) container has none.
+    Makes every worker correct regardless of ASGI lifespan timing."""
+    if analysis.day_count() == 0:
+        try:
+            refresh_data()
+        except Exception as e:
+            print(f"  ! ensure_loaded failed: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -128,10 +138,11 @@ def health():
 
 @app.get("/status")
 def status():
+    ensure_loaded()
     return {
         "api_key": config.api_key_present(),
         "provider": config.LLM_PROVIDER,
-        "days": _state["days"] or analysis.day_count(),
+        "days": analysis.day_count(),
         "new_reports": [],
     }
 
@@ -148,6 +159,7 @@ def login(body: LoginBody):
 # ---------------------------------------------------------------------------
 @app.post("/ask")
 def ask(body: AskBody, user=Depends(require_auth)):
+    ensure_loaded()
     return claude_client.answer_question(body.message, body.history)
 
 
@@ -156,11 +168,13 @@ def ask(body: AskBody, user=Depends(require_auth)):
 # ---------------------------------------------------------------------------
 @app.get("/signals/latest")
 def signals_latest(user=Depends(require_auth)):
+    ensure_loaded()
     return intelligence.run(trigger="view: console open")
 
 
 @app.post("/signals/run")
 def signals_run(body: RunBody, user=Depends(require_auth)):
+    ensure_loaded()
     run = intelligence.run(trigger=body.trigger)
     store.save_run(run)
     delivery = notify.deliver(run) if body.deliver else None
@@ -182,6 +196,7 @@ def signals_get(run_id: str, user=Depends(require_auth)):
 
 @app.post("/signals/send")
 def signals_send(body: SendBody, user=Depends(require_auth)):
+    ensure_loaded()
     run = store.load_run(body.run_id) if body.run_id else None
     if not run:
         run = intelligence.run(trigger="manual: send from console")
