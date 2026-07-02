@@ -105,7 +105,11 @@ def _send_via_resend(html_body, text_body, to_addrs, subject):
     req = urllib.request.Request(
         "https://api.resend.com/emails", data=body, method="POST",
         headers={"Authorization": f"Bearer {config.RESEND_API_KEY}",
-                 "Content-Type": "application/json"})
+                 "Content-Type": "application/json",
+                 # Resend sits behind Cloudflare, which blocks the default
+                 # python-urllib User-Agent (403 "error code: 1010"). Send a
+                 # real UA so the request isn't treated as a bot.
+                 "User-Agent": "vaalco-fuel-intelligence/1.0 (+https://vaalco-fuel-intelligence.vercel.app)"})
     with urllib.request.urlopen(req, timeout=30) as resp:
         return json.loads(resp.read())
 

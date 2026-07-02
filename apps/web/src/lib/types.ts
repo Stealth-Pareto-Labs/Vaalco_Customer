@@ -96,9 +96,22 @@ export interface RunResponse {
   delivery: unknown;
 }
 
+export interface DeliveryResult {
+  email?: {
+    sent?: boolean;
+    simulated?: boolean;
+    provider?: string;
+    error?: string;
+    detail?: string;
+    to?: string[];
+    id?: string;
+  };
+  sms?: { sent?: boolean; detail?: string };
+}
+
 export interface SendResponse {
   run_id: string;
-  delivery: unknown;
+  delivery: DeliveryResult | null;
 }
 
 export interface SettingsConfig {

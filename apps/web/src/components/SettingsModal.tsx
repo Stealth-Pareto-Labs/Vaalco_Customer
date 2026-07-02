@@ -147,9 +147,16 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     setSending(true);
     try {
       await persist(); // make sure the latest recipients are saved first
-      await api.signalsSend(null);
-      toast(t("settings.sentOk"));
-      onClose();
+      const res = await api.signalsSend(null);
+      const email = res.delivery?.email;
+      if (email?.sent) {
+        toast(t("settings.sentOk"));
+        onClose();
+      } else {
+        // provider rejected / not configured — surface the real reason
+        setError(email?.detail || t("settings.sendError"));
+        toast(t("settings.sendError"), "error");
+      }
     } catch {
       toast(t("settings.sendError"), "error");
     } finally {
