@@ -136,8 +136,9 @@ def upsert_daily_record(record, raw_report_id=None,
                  (tenant_id, vessel_id, raw_report_id, report_date, fuel_l, dp_hours, resid_l, payload)
                values (%s,%s,%s,%s,%s,%s,%s,%s)
                on conflict (vessel_id, report_date) do update set
-                 raw_report_id=excluded.raw_report_id, fuel_l=excluded.fuel_l,
-                 dp_hours=excluded.dp_hours, resid_l=excluded.resid_l, payload=excluded.payload""",
+                 raw_report_id=coalesce(excluded.raw_report_id, public.daily_records.raw_report_id),
+                 fuel_l=excluded.fuel_l, dp_hours=excluded.dp_hours,
+                 resid_l=excluded.resid_l, payload=excluded.payload""",
             (tenant_id, vessel_id, raw_report_id, record.get("date"),
              record.get("fuel_L"), record.get("dp_hours"), record.get("resid_L"),
              json.dumps(record, default=str)),
