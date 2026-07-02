@@ -35,7 +35,8 @@ const en: Messages = {
   "login.submit": "Sign in",
   "login.loading": "Signing in…",
   "login.error": "Invalid access code",
-  "login.footer": "VAALCO Energy · ETAME Field · Offshore Gabon",
+  "login.errorNetwork": "Couldn't reach the server. Check your connection and try again.",
+  "login.footer": "Secure access · VAALCO Energy",
 
   // Ask tab
   "ask.hint": "Ask about fuel consumption, DP efficiency, maintenance, or HSE across recent daily reports.",
@@ -100,7 +101,8 @@ const fr: Messages = {
   "login.submit": "Se connecter",
   "login.loading": "Connexion…",
   "login.error": "Code d'accès invalide",
-  "login.footer": "VAALCO Energy · Champ ETAME · Offshore Gabon",
+  "login.errorNetwork": "Serveur inaccessible. Vérifiez votre connexion et réessayez.",
+  "login.footer": "Accès sécurisé · VAALCO Energy",
 
   // Ask tab
   "ask.hint": "Posez des questions sur la consommation de carburant, l'efficacité DP, la maintenance ou le HSE à partir des rapports journaliers récents.",

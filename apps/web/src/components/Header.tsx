@@ -1,6 +1,7 @@
 "use client";
 
-import { Ship, LogOut } from "lucide-react";
+import Image from "next/image";
+import { LogOut } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import LangToggle from "@/components/LangToggle";
 
@@ -18,14 +19,16 @@ export default function Header({ days, connected, onLogout }: HeaderProps) {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-6">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line2"
-            style={{
-              background:
-                "linear-gradient(140deg, var(--navy), var(--primary-strong))"
-            }}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line2 bg-surface2"
             aria-hidden="true"
           >
-            <Ship size={22} className="text-white" />
+            <Image
+              src="/vaalco-mark.png"
+              alt="VAALCO"
+              width={60}
+              height={30}
+              className="h-auto w-[30px]"
+            />
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-[17px] font-semibold leading-tight text-ink">
