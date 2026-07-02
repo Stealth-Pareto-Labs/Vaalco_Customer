@@ -130,8 +130,13 @@ class SendBody(BaseModel):
     run_id: str | None = None
 
 
+class RecipientModel(BaseModel):
+    email: str
+    lang: str = "en"
+
+
 class SettingsBody(BaseModel):
-    emails: list[str] = []
+    recipients: list[RecipientModel] = []
     digest_enabled: bool = True
     digest_time: str = "08:00"
     timezone: str = "Africa/Libreville"
@@ -207,12 +212,21 @@ def signals_get(run_id: str, user=Depends(require_auth)):
 @app.post("/signals/send")
 def signals_send(body: SendBody, user=Depends(require_auth)):
     ensure_loaded()
-    run = store.load_run(body.run_id) if body.run_id else None
-    if not run:
-        run = intelligence.run(trigger="manual: send from console")
-        store.save_run(run)
-    delivery = notify.deliver(run)
-    return {"run_id": run["run_id"], "delivery": delivery}
+    # Base (English) run is saved to history; each recipient is then emailed the
+    # report in their own language.
+    base = intelligence.run(trigger="manual: send from console", lang="en")
+    store.save_run(base)
+    results = notify.deliver_localized(
+        lambda lang: intelligence.run(trigger="manual: send", lang=lang),
+        cache={"en": base})
+    to = [addr for r in results for addr in r["to"]]
+    emails = [r["email"] for r in results]
+    sent = bool(emails) and all(e.get("sent") for e in emails)
+    detail = next((e.get("detail") for e in emails if not e.get("sent")), None)
+    return {"run_id": base["run_id"],
+            "delivery": {"email": {"sent": sent, "to": to, "detail": detail,
+                                   "per_lang": [{"lang": r["lang"], "to": r["to"],
+                                                 "sent": r["email"].get("sent")} for r in results]}}}
 
 
 @app.get("/signals/preview/{run_id}", response_class=HTMLResponse)
@@ -335,18 +349,23 @@ def dashboard(user=Depends(require_auth)):
 # Settings — alert recipient email
 # ---------------------------------------------------------------------------
 _SETTINGS_DEFAULTS = {
-    "emails": [], "digest_enabled": True, "digest_time": "08:00",
+    "recipients": [], "digest_enabled": True, "digest_time": "08:00",
     "timezone": "Africa/Libreville", "critical_immediate": True,
 }
 
 
 def _read_settings():
     cfg = store.get_setting("alert_config") or {}
-    # migrate legacy single-list if present and no emails yet
-    if not cfg.get("emails"):
-        legacy = store.get_setting("alert_recipients") or []
-        cfg["emails"] = [r.get("email") for r in legacy if r.get("email")]
-    return {k: cfg.get(k, v) for k, v in _SETTINGS_DEFAULTS.items()}
+    recipients = cfg.get("recipients")
+    if not recipients:
+        # migrate legacy shapes (emails list, or alert_recipients) -> recipients
+        emails = cfg.get("emails") or [r.get("email") for r in
+                                       (store.get_setting("alert_recipients") or [])
+                                       if r.get("email")]
+        recipients = [{"email": e, "lang": "en"} for e in emails if e]
+    out = {k: cfg.get(k, v) for k, v in _SETTINGS_DEFAULTS.items()}
+    out["recipients"] = recipients
+    return out
 
 
 @app.get("/settings")
@@ -356,22 +375,23 @@ def get_settings(user=Depends(require_auth)):
 
 @app.post("/settings")
 def save_settings(body: SettingsBody, user=Depends(require_auth)):
-    clean_emails = []
-    for e in body.emails:
-        e = (e or "").strip()
+    clean = []
+    seen = set()
+    for r in body.recipients:
+        e = (r.email or "").strip()
         if not e:
             continue
         if "@" not in e or "." not in e.split("@")[-1]:
             raise HTTPException(status_code=400, detail=f"Invalid email: {e}")
-        if e not in clean_emails:
-            clean_emails.append(e)
-    # validate timezone
+        lang = r.lang if r.lang in ("en", "fr") else "en"
+        if e not in seen:
+            seen.add(e)
+            clean.append({"email": e, "lang": lang})
     try:
         from zoneinfo import ZoneInfo
         ZoneInfo(body.timezone)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid timezone")
-    # validate HH:MM
     try:
         hh, mm = body.digest_time.split(":")
         assert 0 <= int(hh) <= 23 and 0 <= int(mm) <= 59
@@ -379,8 +399,9 @@ def save_settings(body: SettingsBody, user=Depends(require_auth)):
         raise HTTPException(status_code=400, detail="Invalid digest time (use HH:MM)")
 
     cfg = store.get_setting("alert_config") or {}
+    cfg.pop("emails", None)   # drop the legacy field
     cfg.update({
-        "emails": clean_emails,
+        "recipients": clean,
         "digest_enabled": body.digest_enabled,
         "digest_time": body.digest_time,
         "timezone": body.timezone,

@@ -26,10 +26,10 @@ function isValidEmail(e: string) {
 }
 
 export default function SettingsModal({ open, onClose }: SettingsModalProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { toast } = useToast();
 
-  const [emails, setEmails] = useState<string[]>([]);
+  const [recipients, setRecipients] = useState<{ email: string; lang: string }[]>([]);
   const [newEmail, setNewEmail] = useState("");
   const [criticalImmediate, setCriticalImmediate] = useState(true);
   const [digestEnabled, setDigestEnabled] = useState(true);
@@ -54,7 +54,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     api
       .getSettings()
       .then((s) => {
-        setEmails(s.emails ?? []);
+        setRecipients(s.recipients ?? []);
         setCriticalImmediate(s.critical_immediate ?? true);
         setDigestEnabled(s.digest_enabled ?? true);
         setDigestTime(s.digest_time ?? "08:00");
@@ -91,23 +91,28 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
       setError(t("settings.invalid"));
       return;
     }
-    if (emails.includes(e)) {
+    if (recipients.some((r) => r.email === e)) {
       setError(t("settings.emailExists"));
       return;
     }
-    setEmails((prev) => [...prev, e]);
+    setRecipients((prev) => [...prev, { email: e, lang: locale }]);
     setNewEmail("");
     setError(null);
     setSaved(false);
   };
 
-  const removeEmail = (e: string) => {
-    setEmails((prev) => prev.filter((x) => x !== e));
+  const removeRecipient = (email: string) => {
+    setRecipients((prev) => prev.filter((r) => r.email !== email));
+    setSaved(false);
+  };
+
+  const setRecipientLang = (email: string, lang: string) => {
+    setRecipients((prev) => prev.map((r) => (r.email === email ? { ...r, lang } : r)));
     setSaved(false);
   };
 
   const buildConfig = () => ({
-    emails,
+    recipients,
     digest_enabled: digestEnabled,
     digest_time: digestTime,
     timezone,
@@ -116,7 +121,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
 
   const persist = async () => {
     const res = await api.saveSettings(buildConfig());
-    setEmails(res.emails ?? []);
+    setRecipients(res.recipients ?? []);
     return res;
   };
 
@@ -140,7 +145,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const sendNow = async () => {
     if (sending) return;
     setError(null);
-    if (emails.length === 0) {
+    if (recipients.length === 0) {
       setError(t("settings.noRecipients"));
       return;
     }
@@ -196,24 +201,40 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
         <div className="scroll-thin flex-1 overflow-y-auto px-6">
           {/* Recipients */}
           <SectionLabel icon={<Mail size={13} />}>{t("settings.recipients")}</SectionLabel>
-          <div className="mb-2 flex flex-wrap gap-2">
-            {emails.map((e) => (
-              <span
-                key={e}
-                className="flex items-center gap-1.5 rounded-full border border-line2 bg-surface2 py-1 pl-3 pr-1.5 text-[13px] text-ink"
+          <div className="mb-2 flex flex-col gap-2">
+            {recipients.map((r) => (
+              <div
+                key={r.email}
+                className="flex items-center gap-2 rounded-lg border border-line bg-black/15 py-1.5 pl-3 pr-1.5"
               >
-                {e}
+                <span className="min-w-0 flex-1 truncate text-[13.5px] text-ink">{r.email}</span>
+                {/* per-recipient language */}
+                <div className="flex shrink-0 overflow-hidden rounded-md border border-line2">
+                  {(["en", "fr"] as const).map((lg) => (
+                    <button
+                      key={lg}
+                      type="button"
+                      onClick={() => setRecipientLang(r.email, lg)}
+                      aria-pressed={r.lang === lg}
+                      className={`focus-ring cursor-pointer px-2 py-1 text-[11px] font-semibold uppercase transition-colors duration-150 ${
+                        r.lang === lg ? "bg-primary text-white" : "text-mut hover:text-ink"
+                      }`}
+                    >
+                      {lg}
+                    </button>
+                  ))}
+                </div>
                 <button
                   type="button"
-                  onClick={() => removeEmail(e)}
-                  aria-label={`Remove ${e}`}
-                  className="focus-ring cursor-pointer rounded-full p-0.5 text-mut hover:text-hi"
+                  onClick={() => removeRecipient(r.email)}
+                  aria-label={`Remove ${r.email}`}
+                  className="focus-ring shrink-0 cursor-pointer rounded-md p-1 text-mut hover:text-hi"
                 >
-                  <X size={13} aria-hidden="true" />
+                  <X size={14} aria-hidden="true" />
                 </button>
-              </span>
+              </div>
             ))}
-            {emails.length === 0 && !loading && (
+            {recipients.length === 0 && !loading && (
               <span className="text-[13px] text-mut2">{t("settings.noRecipients")}</span>
             )}
           </div>

@@ -114,8 +114,13 @@ export interface SendResponse {
   delivery: DeliveryResult | null;
 }
 
+export interface Recipient {
+  email: string;
+  lang: string; // "en" | "fr"
+}
+
 export interface SettingsConfig {
-  emails: string[];
+  recipients: Recipient[];
   digest_enabled: boolean;
   digest_time: string; // "HH:MM"
   timezone: string;

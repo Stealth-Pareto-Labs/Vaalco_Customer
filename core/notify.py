@@ -33,31 +33,77 @@ import report as report_mod
 _PRI_RANK = {"none": 0, "low": 1, "medium": 2, "high": 3}
 
 
+def _mk_recipient(email, lang="en"):
+    return {"name": "", "email": email, "lang": (lang or "en"),
+            "phone": "", "sms_from_priority": "none"}
+
+
 def _recipients():
-    """Alert recipients: the UI-configured emails (app_settings 'alert_config')
-    if present, else the legacy list, else the env/config fallback."""
+    """Alert recipients (each with a language) from app_settings 'alert_config'.
+    Falls back through legacy shapes, then the env/config default."""
     try:
         import store
         cfg = store.get_setting("alert_config")
         if isinstance(cfg, dict):
-            emails = [e for e in (cfg.get("emails") or []) if e]
+            recs = cfg.get("recipients")
+            if isinstance(recs, list) and recs:
+                return [_mk_recipient(r.get("email"), r.get("lang"))
+                        for r in recs if r.get("email")]
+            emails = [e for e in (cfg.get("emails") or []) if e]   # legacy shape
             if emails:
-                return [{"name": "", "email": e, "phone": "",
-                         "sms_from_priority": "none"} for e in emails]
+                return [_mk_recipient(e) for e in emails]
         legacy = store.get_setting("alert_recipients")
         if isinstance(legacy, list) and legacy:
-            return legacy
+            return [{**r, "lang": r.get("lang", "en")} for r in legacy]
     except Exception:
         pass
-    return config.RECIPIENTS
+    return [{**r, "lang": r.get("lang", "en")} for r in config.RECIPIENTS]
 
 
-def apply_delivery_policy(run):
+def deliver_localized(run_factory, critical=False, cache=None):
+    """Send each recipient the report in THEIR language.
+    run_factory(lang) -> a run object generated in that language; results are
+    cached so each language is only generated once. Returns a list of per-language
+    results and logs a notification row per group."""
+    recips = _recipients()
+    cache = dict(cache or {})
+
+    if not recips:
+        # No recipients configured — still produce a (default-language) result so
+        # the caller/UI can surface "no recipients / not sent".
+        run = cache.get("en") or run_factory("en")
+        return [{"lang": "en", "to": [], "email": send_email(run, critical=critical)}]
+
+    by_lang = {}
+    for r in recips:
+        by_lang.setdefault(r.get("lang") or "en", []).append(r)
+
+    out = []
+    for lang, group in by_lang.items():
+        run = cache.get(lang)
+        if run is None:
+            run = run_factory(lang)
+            cache[lang] = run
+        res = send_email(run, critical=critical, recipients=group)
+        out.append({"lang": lang, "to": [r["email"] for r in group], "email": res})
+        try:
+            import store
+            status = ("sent" if res.get("sent")
+                      else "simulated" if res.get("simulated") else "failed")
+            store.log_notification("email", [r["email"] for r in group], status,
+                                   detail=res.get("detail") or res.get("subject"),
+                                   run_id=run.get("run_id"))
+        except Exception:
+            pass
+    return out
+
+
+def apply_delivery_policy(run, run_factory=None):
     """Auto-delivery rule for a freshly-generated run:
       - if it contains HIGH (red/critical) signals and critical_immediate is on,
-        deliver right away;
-      - otherwise hold it for the scheduled digest (the scheduler sends that).
-    Returns the delivery result dict if sent, else None."""
+        deliver right away (per-recipient language when run_factory is given);
+      - otherwise hold it for the scheduled digest.
+    Returns the delivery result if sent, else None."""
     try:
         import store
         cfg = store.get_setting("alert_config") or {}
@@ -65,6 +111,8 @@ def apply_delivery_policy(run):
         cfg = {}
     high = (run.get("counts") or {}).get("high", 0)
     if high and cfg.get("critical_immediate", True):
+        if run_factory is not None:
+            return deliver_localized(run_factory, critical=True, cache={"en": run})
         return deliver(run, critical=True)
     return None
 
@@ -114,13 +162,13 @@ def _send_via_resend(html_body, text_body, to_addrs, subject):
         return json.loads(resp.read())
 
 
-def send_email(run, html_body=None, text_body=None, critical=False):
+def send_email(run, html_body=None, text_body=None, critical=False, recipients=None):
     """Send (or, if unconfigured, save) the full report email to all recipients.
     Prefers Resend, falls back to SMTP, and simulates if neither is configured.
     Returns a result dict describing what happened."""
     html_body = html_body if html_body is not None else report_mod.render_html(run)
     text_body = text_body if text_body is not None else report_mod.render_text(run)
-    recipients = _recipients()
+    recipients = recipients if recipients is not None else _recipients()
     subject = report_mod.subject_line(run)
     if critical:
         subject = f"[CRITICAL] {subject}"

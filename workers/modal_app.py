@@ -118,9 +118,12 @@ def digest_tick():
         return {"skipped": "already sent today"}
 
     analysis.load(store.load_daily_records() or [])
-    run = intelligence.run(trigger="scheduled digest")
+    run = intelligence.run(trigger="scheduled digest", lang="en")
     store.save_run(run)
-    delivery = notify.deliver(run)
+    # email each recipient the digest in their own language
+    notify.deliver_localized(
+        lambda lang: intelligence.run(trigger="scheduled digest", lang=lang),
+        cache={"en": run})
     cfg["last_digest_date"] = today
     store.set_setting("alert_config", cfg)
     return {"sent": True, "run_id": run["run_id"], "local": now.strftime("%H:%M %Z")}

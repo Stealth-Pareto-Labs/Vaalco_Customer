@@ -156,8 +156,11 @@ def ingest_bytes(data: bytes, source_file: str, storage_path: str,
         if deliver:
             result["delivery"] = notify.deliver(run)
         elif auto_deliver:
-            # critical (HIGH) signals go out now; medium/low wait for the digest
-            result["delivery"] = notify.apply_delivery_policy(run)
+            # critical (HIGH) signals go out now, each recipient in their language;
+            # medium/low wait for the digest
+            trig = f"auto: new report {record.get('date')}"
+            result["delivery"] = notify.apply_delivery_policy(
+                run, run_factory=lambda lang: intelligence.run(trigger=trig, lang=lang))
         _ping_api_refresh()
 
     return result
