@@ -1,10 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { MessageSquare, Activity } from "lucide-react";
+import { MessageSquare, Activity, LayoutDashboard } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
-export type TabKey = "ask" | "signals";
+export type TabKey = "dashboard" | "ask" | "signals";
 
 interface TabsProps {
   active: TabKey;
@@ -16,6 +16,7 @@ export default function Tabs({ active, onChange, highCount }: TabsProps) {
   const { t } = useI18n();
 
   const tabs: { key: TabKey; label: string; icon: ReactNode }[] = [
+    { key: "dashboard", label: t("tab.dashboard"), icon: <LayoutDashboard size={16} /> },
     { key: "signals", label: t("tab.signals"), icon: <Activity size={16} /> },
     { key: "ask", label: t("tab.ask"), icon: <MessageSquare size={16} /> }
   ];

@@ -42,6 +42,7 @@ from pydantic import BaseModel
 
 import config              # noqa: E402
 import analysis            # noqa: E402
+import signals             # noqa: E402
 import claude_client       # noqa: E402
 import intelligence        # noqa: E402
 import report as report_mod  # noqa: E402
@@ -220,6 +221,109 @@ def signals_preview(run_id: str, token: str = ""):
         run = intelligence.run(trigger="preview")
         store.save_run(run)
     return HTMLResponse(report_mod.render_html(run))
+
+
+# ---------------------------------------------------------------------------
+# Dashboard — aggregate every deterministic series for the charts.
+# Pure aggregation over the existing analysis tools; no analysis logic changes.
+# ---------------------------------------------------------------------------
+def _is_waste_fluid(name: str) -> bool:
+    n = name.lower()
+    return any(w in n for w in ("bilge", "sludge", "dirty", "waste", "slop"))
+
+
+def build_dashboard():
+    ov = analysis.dataset_overview()
+    if ov.get("error"):
+        return {"error": ov["error"], "reports_loaded": 0}
+
+    model = analysis.model_summary()
+    price = config.MGO_PRICE_PER_M3
+
+    # Per-day fuel series (actual vs model, deviation, $ impact, DP efficiency)
+    fuel_series = []
+    for date in ov.get("dates_present", []):
+        d = analysis.explain_day(date)
+        if d.get("error"):
+            continue
+        dp = d.get("dp_hours")
+        fuel_series.append({
+            "date": d["date"],
+            "actual_L": d["fuel_actual_L"],
+            "expected_L": d["expected_L"],
+            "deviation_L": d["deviation_L"],
+            "cost_usd": d["deviation_cost_usd"],
+            "dp_hours": dp,
+            "L_per_dp_hour": round(d["fuel_actual_L"] / dp) if dp else None,
+        })
+
+    net_dev = sum(r["deviation_L"] for r in fuel_series)
+    net_cost = sum(r["cost_usd"] for r in fuel_series)
+    fov = analysis.fuel_overview()
+
+    dpe = analysis.dp_efficiency()
+    maint = analysis.maintenance_status()
+    machines = [m for m in maint.get("machines", []) if m.get("hours_remaining") is not None]
+    machines.sort(key=lambda m: m["hours_remaining"])
+
+    fluids_raw = analysis.fluid_status().get("fluids", {})
+    fluids = []
+    for name, f in fluids_raw.items():
+        bal, cons = f.get("balance"), f.get("consumed")
+        waste = _is_waste_fluid(name)
+        dte = (round(bal / cons) if (not waste and isinstance(bal, (int, float))
+                                     and isinstance(cons, (int, float)) and cons > 0) else None)
+        fluids.append({"name": name, "balance": bal, "consumed": cons,
+                       "unit": f.get("unit"), "days_to_empty": dte, "is_waste": waste})
+
+    eng = analysis.engine_health()
+    hse = analysis.hse_status()
+    det = signals.detect_all()
+
+    return {
+        "as_of": ov.get("date_range", "").split(" to ")[-1],
+        "vessel": ov.get("vessel"), "field": ov.get("field"),
+        "reports_loaded": ov.get("reports_loaded", 0),
+        "date_range": ov.get("date_range"),
+        "mgo_price_per_m3": price,
+        "model": {"base_L": model.get("base_L"), "rate": model.get("rate"), "sd": model.get("sd")},
+        "kpis": {
+            "mean_daily_fuel_L": fov.get("mean_daily_fuel_L"),
+            "mean_daily_cost_usd": fov.get("mean_daily_cost_usd"),
+            "annualised_cost_usd": fov.get("annualised_cost_usd"),
+            "net_deviation_L": net_dev,
+            "net_cost_impact_usd": net_cost,
+            "worst_day": fov.get("worst_day"),
+            "worst_day_deviation_L": fov.get("worst_day_deviation_L"),
+        },
+        "signal_counts": det.get("counts", {}),
+        "fuel_series": fuel_series,
+        "dp_efficiency": {
+            "days": dpe.get("days", []) if not dpe.get("error") else [],
+            "best": dpe.get("best_day"), "worst": dpe.get("worst_day"),
+            "spread_percent": dpe.get("spread_percent"),
+        },
+        "maintenance": machines,
+        "fluids": fluids,
+        "engine": {
+            "me1_temps": eng.get("me1_cylinder_temps_C", []),
+            "me2_temps": eng.get("me2_cylinder_temps_C", []),
+            "me1_deviation": eng.get("me1_deviation_C"),
+            "me2_deviation": eng.get("me2_deviation_C"),
+            "telemetry_is_static": eng.get("telemetry_is_static"),
+            "note": eng.get("data_quality_note"),
+        } if not eng.get("error") else None,
+        "hse": {
+            "tallies": hse.get("tallies", {}),
+            "near_misses": hse.get("near_misses_to_date"),
+        } if not hse.get("error") else None,
+    }
+
+
+@app.get("/dashboard")
+def dashboard(user=Depends(require_auth)):
+    ensure_loaded()
+    return build_dashboard()
 
 
 # ---------------------------------------------------------------------------

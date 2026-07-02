@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { X, Mail, Loader2, Check, AlertTriangle } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
@@ -18,6 +19,9 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!open) return;
@@ -39,7 +43,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -59,7 +63,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
     }
   };
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
@@ -141,6 +145,7 @@ export default function SettingsModal({ open, onClose }: SettingsModalProps) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

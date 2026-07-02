@@ -7,11 +7,12 @@ import Header from "@/components/Header";
 import Tabs, { type TabKey } from "@/components/Tabs";
 import Ask, { type AskHandle } from "@/components/Ask";
 import Signals from "@/components/Signals";
+import Dashboard from "@/components/Dashboard";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
-  const [tab, setTab] = useState<TabKey>("signals");
+  const [tab, setTab] = useState<TabKey>("dashboard");
   const [days, setDays] = useState(0);
   const [connected, setConnected] = useState(true);
   const [highCount, setHighCount] = useState(0);
@@ -81,6 +82,10 @@ export default function DashboardPage() {
 
       <main className="mx-auto max-w-6xl px-4 sm:px-6">
         <Tabs active={tab} onChange={setTab} highCount={highCount} />
+
+        <div role="tabpanel" hidden={tab !== "dashboard"} aria-hidden={tab !== "dashboard"}>
+          <Dashboard active={tab === "dashboard"} />
+        </div>
 
         {/* Ask stays mounted to preserve the conversation thread. */}
         <div

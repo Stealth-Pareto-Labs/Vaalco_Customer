@@ -1,6 +1,7 @@
 import type {
   AskResponse,
   ChatMessage,
+  DashboardData,
   HistoryEntry,
   LoginResponse,
   Run,
@@ -138,6 +139,10 @@ export const api = {
       method: "POST",
       body: { run_id: runId }
     });
+  },
+
+  dashboard(signal?: AbortSignal): Promise<DashboardData> {
+    return request<DashboardData>("/dashboard", { signal });
   },
 
   getSettings(): Promise<{ alert_email: string }> {

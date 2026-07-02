@@ -36,6 +36,7 @@ const en: Messages = {
   "status.disconnected": "disconnected",
 
   // Tabs
+  "tab.dashboard": "Dashboard",
   "tab.ask": "Ask",
   "tab.signals": "Signals",
 
@@ -88,6 +89,81 @@ const en: Messages = {
   "toast.previewError": "Unable to open preview",
   "toast.loadError": "Failed to load data",
 
+  // Dashboard
+  "dashboard.loading": "Loading dashboard…",
+  "dashboard.retry": "Retry",
+  "dashboard.asOf": "As of",
+  "dashboard.reports": "reports loaded",
+  "dashboard.empty.title": "No reports loaded yet",
+  "dashboard.empty.body": "Charts will appear once daily reports are ingested.",
+
+  // Dashboard · sections
+  "dashboard.section.fuelCost": "Fuel & cost",
+  "dashboard.section.efficiency": "Efficiency & workload",
+  "dashboard.section.maintenance": "Maintenance & fluids",
+  "dashboard.section.engineSafety": "Engine & safety",
+
+  // Dashboard · KPIs
+  "dashboard.kpi.avgFuel": "Avg daily fuel",
+  "dashboard.kpi.annualCost": "Annualised fuel cost",
+  "dashboard.kpi.netVsModel": "Net vs model",
+  "dashboard.kpi.openSignals": "Open signals",
+  "dashboard.kpi.perDay": "/ day",
+  "dashboard.kpi.overspent": "overspent",
+  "dashboard.kpi.saved": "saved",
+
+  // Dashboard · chart titles & subtitles
+  "dashboard.chart.fuelActual.title": "Daily fuel — actual vs. model",
+  "dashboard.chart.fuelActual.sub":
+    "Actual daily fuel vs the DP-workload model; the gap is the deviation.",
+  "dashboard.chart.fuelCost.title": "Fuel cost vs. model ($/day)",
+  "dashboard.chart.fuelCost.sub": "Positive = overspent vs expected · negative = saved.",
+  "dashboard.chart.dpEff.title": "DP fuel efficiency",
+  "dashboard.chart.dpEff.sub": "Litres per DP-hour · {spread}% spread best↔worst.",
+  "dashboard.chart.fuelVsDp.title": "Fuel vs. DP hours",
+  "dashboard.chart.fuelVsDp.sub": "Model: {base} L base + {rate} L per DP-hour.",
+  "dashboard.chart.lube.title": "Hours to next lube service",
+  "dashboard.chart.lube.sub": "By machine · red = overdue/urgent.",
+  "dashboard.chart.fluids.title": "Consumable fluids — days to empty",
+  "dashboard.chart.fluids.sub": "At the recent consumption rate.",
+  "dashboard.chart.engine.title": "Main engine cylinder exhaust temps (°C)",
+  "dashboard.chart.engine.sub": "Per-cylinder exhaust temperature.",
+  "dashboard.chart.hse.title": "HSE indicators",
+  "dashboard.chart.hse.sub": "Period totals.",
+
+  // Dashboard · axes & units
+  "dashboard.axis.litres": "Litres",
+  "dashboard.axis.costDay": "USD / day",
+  "dashboard.axis.lPerDp": "L / DP-hour",
+  "dashboard.axis.dpHours": "DP hours",
+  "dashboard.axis.hoursRemaining": "Hours remaining",
+  "dashboard.axis.daysToEmpty": "Days to empty",
+  "dashboard.axis.tempC": "°C",
+  "dashboard.axis.cylinder": "Cylinder",
+  "dashboard.unit.L": "L",
+
+  // Dashboard · legends & chips
+  "dashboard.legend.actual": "Actual",
+  "dashboard.legend.expected": "Expected (model)",
+  "dashboard.legend.overspent": "Overspent",
+  "dashboard.legend.saved": "Saved",
+  "dashboard.legend.me1": "ME1",
+  "dashboard.legend.me2": "ME2",
+  "dashboard.chip.high": "H",
+  "dashboard.chip.medium": "M",
+  "dashboard.chip.low": "L",
+
+  // Dashboard · badges & HSE labels
+  "dashboard.badge.handEntered": "Hand-entered — not a live sensor feed",
+  "dashboard.hse.nearMisses": "Near misses",
+  "dashboard.hse.drills": "Drills",
+  "dashboard.hse.toolbox": "Toolbox meetings",
+  "dashboard.hse.riskAssessments": "Risk assessments",
+  "dashboard.hse.ptw": "Permits to work",
+  "dashboard.hse.workdaysLost": "Workdays lost",
+  "dashboard.hse.propertyDamage": "Property damage",
+  "dashboard.hse.medical": "Medical reports",
+
   // Common
   "common.retry": "Retry",
   "common.error": "Something went wrong"
@@ -114,6 +190,7 @@ const fr: Messages = {
   "status.disconnected": "déconnecté",
 
   // Tabs
+  "tab.dashboard": "Tableau de bord",
   "tab.ask": "Demander",
   "tab.signals": "Signaux",
 
@@ -165,6 +242,83 @@ const fr: Messages = {
   "toast.rerunError": "Échec de la relance du rapport",
   "toast.previewError": "Impossible d'ouvrir l'aperçu",
   "toast.loadError": "Échec du chargement des données",
+
+  // Dashboard
+  "dashboard.loading": "Chargement du tableau de bord…",
+  "dashboard.retry": "Réessayer",
+  "dashboard.asOf": "Au",
+  "dashboard.reports": "rapports chargés",
+  "dashboard.empty.title": "Aucun rapport chargé pour le moment",
+  "dashboard.empty.body":
+    "Les graphiques s'afficheront dès l'intégration des rapports journaliers.",
+
+  // Dashboard · sections
+  "dashboard.section.fuelCost": "Carburant & coût",
+  "dashboard.section.efficiency": "Efficacité & charge de travail",
+  "dashboard.section.maintenance": "Maintenance & fluides",
+  "dashboard.section.engineSafety": "Moteur & sécurité",
+
+  // Dashboard · KPIs
+  "dashboard.kpi.avgFuel": "Carburant journalier moyen",
+  "dashboard.kpi.annualCost": "Coût carburant annualisé",
+  "dashboard.kpi.netVsModel": "Écart net vs modèle",
+  "dashboard.kpi.openSignals": "Signaux ouverts",
+  "dashboard.kpi.perDay": "/ jour",
+  "dashboard.kpi.overspent": "surconsommé",
+  "dashboard.kpi.saved": "économisé",
+
+  // Dashboard · chart titles & subtitles
+  "dashboard.chart.fuelActual.title": "Carburant journalier — réel vs modèle",
+  "dashboard.chart.fuelActual.sub":
+    "Carburant réel journalier vs le modèle de charge DP ; l'écart correspond à la déviation.",
+  "dashboard.chart.fuelCost.title": "Coût carburant vs modèle ($/jour)",
+  "dashboard.chart.fuelCost.sub":
+    "Positif = surconsommation vs prévu · négatif = économie.",
+  "dashboard.chart.dpEff.title": "Efficacité carburant DP",
+  "dashboard.chart.dpEff.sub": "Litres par heure DP · {spread}% d'écart meilleur↔pire.",
+  "dashboard.chart.fuelVsDp.title": "Carburant vs heures DP",
+  "dashboard.chart.fuelVsDp.sub": "Modèle : {base} L de base + {rate} L par heure DP.",
+  "dashboard.chart.lube.title": "Heures avant prochaine vidange",
+  "dashboard.chart.lube.sub": "Par machine · rouge = en retard/urgent.",
+  "dashboard.chart.fluids.title": "Fluides consommables — jours avant épuisement",
+  "dashboard.chart.fluids.sub": "Au rythme de consommation récent.",
+  "dashboard.chart.engine.title": "Températures d'échappement cylindres moteur principal (°C)",
+  "dashboard.chart.engine.sub": "Température d'échappement par cylindre.",
+  "dashboard.chart.hse.title": "Indicateurs HSE",
+  "dashboard.chart.hse.sub": "Totaux de la période.",
+
+  // Dashboard · axes & units
+  "dashboard.axis.litres": "Litres",
+  "dashboard.axis.costDay": "USD / jour",
+  "dashboard.axis.lPerDp": "L / heure DP",
+  "dashboard.axis.dpHours": "Heures DP",
+  "dashboard.axis.hoursRemaining": "Heures restantes",
+  "dashboard.axis.daysToEmpty": "Jours avant épuisement",
+  "dashboard.axis.tempC": "°C",
+  "dashboard.axis.cylinder": "Cylindre",
+  "dashboard.unit.L": "L",
+
+  // Dashboard · legends & chips
+  "dashboard.legend.actual": "Réel",
+  "dashboard.legend.expected": "Prévu (modèle)",
+  "dashboard.legend.overspent": "Surconsommation",
+  "dashboard.legend.saved": "Économie",
+  "dashboard.legend.me1": "MP1",
+  "dashboard.legend.me2": "MP2",
+  "dashboard.chip.high": "H",
+  "dashboard.chip.medium": "M",
+  "dashboard.chip.low": "B",
+
+  // Dashboard · badges & HSE labels
+  "dashboard.badge.handEntered": "Saisi à la main — pas un flux de capteur en direct",
+  "dashboard.hse.nearMisses": "Presqu'accidents",
+  "dashboard.hse.drills": "Exercices",
+  "dashboard.hse.toolbox": "Réunions sécurité",
+  "dashboard.hse.riskAssessments": "Évaluations des risques",
+  "dashboard.hse.ptw": "Permis de travail",
+  "dashboard.hse.workdaysLost": "Journées perdues",
+  "dashboard.hse.propertyDamage": "Dommages matériels",
+  "dashboard.hse.medical": "Rapports médicaux",
 
   // Common
   "common.retry": "Réessayer",

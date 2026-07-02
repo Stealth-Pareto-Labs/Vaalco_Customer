@@ -100,3 +100,81 @@ export interface SendResponse {
   run_id: string;
   delivery: unknown;
 }
+
+// ---- Dashboard ----
+export interface FuelPoint {
+  date: string;
+  actual_L: number;
+  expected_L: number;
+  deviation_L: number;
+  cost_usd: number;
+  dp_hours: number | null;
+  L_per_dp_hour: number | null;
+}
+
+export interface MaintenanceItem {
+  machine: string;
+  total_run_hours: number | null;
+  next_target_h: number | null;
+  hours_remaining: number | null;
+  days_to_service: number | null;
+  status: string;
+}
+
+export interface FluidItem {
+  name: string;
+  balance: number | null;
+  consumed: number | null;
+  unit: string | null;
+  days_to_empty: number | null;
+  is_waste: boolean;
+}
+
+export interface DpEffDay {
+  date: string;
+  dp_hours: number;
+  fuel_L: number;
+  L_per_dp_hour: number;
+}
+
+export interface DashboardData {
+  as_of: string;
+  vessel: string;
+  field: string;
+  reports_loaded: number;
+  date_range: string;
+  mgo_price_per_m3: number;
+  model: { base_L: number; rate: number; sd: number };
+  kpis: {
+    mean_daily_fuel_L: number;
+    mean_daily_cost_usd: number;
+    annualised_cost_usd: number;
+    net_deviation_L: number;
+    net_cost_impact_usd: number;
+    worst_day: string;
+    worst_day_deviation_L: number;
+  };
+  signal_counts: Counts;
+  fuel_series: FuelPoint[];
+  dp_efficiency: {
+    days: DpEffDay[];
+    best: DpEffDay | null;
+    worst: DpEffDay | null;
+    spread_percent: number | null;
+  };
+  maintenance: MaintenanceItem[];
+  fluids: FluidItem[];
+  engine: {
+    me1_temps: number[];
+    me2_temps: number[];
+    me1_deviation: number | null;
+    me2_deviation: number | null;
+    telemetry_is_static: boolean;
+    note: string;
+  } | null;
+  hse: {
+    tallies: Record<string, number>;
+    near_misses: number | null;
+  } | null;
+  error?: string;
+}
