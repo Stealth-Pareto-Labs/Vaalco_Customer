@@ -1,5 +1,9 @@
 # VAALCO Fuel Intelligence Platform
 
+> **Live:** Web app → https://vaalco-fuel-intelligence.vercel.app (access code required) ·
+> API → https://team-work--vaalco-api-fastapi-app.modal.run ·
+> LLM → Claude Sonnet 5 · Data → Supabase. See `docs/DEPLOYMENT.md`.
+
 AI-assisted fuel-monitoring and analytics for offshore vessel operations. Ingests
 vessel operational reports, runs **deterministic** Python analysis (fuel vs.
 DP-workload model, DP efficiency, maintenance, fluids, HSE), and uses a frontier
@@ -19,7 +23,7 @@ many vessels.
 Frontend (Next.js, EN/FR) ── Vercel
         │  HTTPS + Supabase JWT
         ▼
-API (FastAPI) ── Render (always-on)
+API (FastAPI) ── Modal (always-warm ASGI)
         │                 │ enqueue                 ▲ query
         │                 ▼                          │
         │        Queue (Supabase pgmq) ──▶ Workers ── Modal (elastic)
@@ -33,8 +37,8 @@ Notifications ── Resend (email) + Twilio (SMS, optional), severity-gated
 
 | Layer | Tech | Home |
 |-------|------|------|
-| Frontend | Next.js + next-intl (English/French) | Vercel |
-| API | FastAPI (async) | Render |
+| Frontend | Next.js (English/French toggle) | Vercel |
+| API | FastAPI (async ASGI, always-warm) | Modal |
 | Workers | Modal functions (event-driven, autoscaling) | Modal |
 | Data | Postgres + Storage + Auth (row-level security) | Supabase |
 | LLM | Provider-abstracted (Claude default, OpenAI swappable) | — |
