@@ -1,0 +1,5 @@
+# The only third-party dependency: reading the Excel reports.
+openpyxl>=3.1
+
+# Everything else (web server, SMTP email, Twilio SMS via REST) uses the
+# Python standard library only — no framework, no SDKs, no build step.
