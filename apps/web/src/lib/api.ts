@@ -7,6 +7,7 @@ import type {
   Run,
   RunResponse,
   SendResponse,
+  SettingsConfig,
   StatusResponse
 } from "@/lib/types";
 
@@ -145,15 +146,12 @@ export const api = {
     return request<DashboardData>("/dashboard", { signal });
   },
 
-  getSettings(): Promise<{ alert_email: string }> {
-    return request<{ alert_email: string }>("/settings");
+  getSettings(): Promise<SettingsConfig> {
+    return request<SettingsConfig>("/settings");
   },
 
-  setAlertEmail(email: string): Promise<{ alert_email: string }> {
-    return request<{ alert_email: string }>("/settings/alert-email", {
-      method: "POST",
-      body: { email }
-    });
+  saveSettings(cfg: SettingsConfig): Promise<SettingsConfig> {
+    return request<SettingsConfig>("/settings", { method: "POST", body: cfg });
   }
 };
 

@@ -34,16 +34,39 @@ _PRI_RANK = {"none": 0, "low": 1, "medium": 2, "high": 3}
 
 
 def _recipients():
-    """Alert recipients: the UI-configured list (app_settings) if present,
-    otherwise the env/config fallback."""
+    """Alert recipients: the UI-configured emails (app_settings 'alert_config')
+    if present, else the legacy list, else the env/config fallback."""
     try:
         import store
-        configured = store.get_setting("alert_recipients")
-        if isinstance(configured, list) and configured:
-            return configured
+        cfg = store.get_setting("alert_config")
+        if isinstance(cfg, dict):
+            emails = [e for e in (cfg.get("emails") or []) if e]
+            if emails:
+                return [{"name": "", "email": e, "phone": "",
+                         "sms_from_priority": "none"} for e in emails]
+        legacy = store.get_setting("alert_recipients")
+        if isinstance(legacy, list) and legacy:
+            return legacy
     except Exception:
         pass
     return config.RECIPIENTS
+
+
+def apply_delivery_policy(run):
+    """Auto-delivery rule for a freshly-generated run:
+      - if it contains HIGH (red/critical) signals and critical_immediate is on,
+        deliver right away;
+      - otherwise hold it for the scheduled digest (the scheduler sends that).
+    Returns the delivery result dict if sent, else None."""
+    try:
+        import store
+        cfg = store.get_setting("alert_config") or {}
+    except Exception:
+        cfg = {}
+    high = (run.get("counts") or {}).get("high", 0)
+    if high and cfg.get("critical_immediate", True):
+        return deliver(run, critical=True)
+    return None
 
 
 def _outbox_dir():
@@ -87,7 +110,7 @@ def _send_via_resend(html_body, text_body, to_addrs, subject):
         return json.loads(resp.read())
 
 
-def send_email(run, html_body=None, text_body=None):
+def send_email(run, html_body=None, text_body=None, critical=False):
     """Send (or, if unconfigured, save) the full report email to all recipients.
     Prefers Resend, falls back to SMTP, and simulates if neither is configured.
     Returns a result dict describing what happened."""
@@ -95,6 +118,8 @@ def send_email(run, html_body=None, text_body=None):
     text_body = text_body if text_body is not None else report_mod.render_text(run)
     recipients = _recipients()
     subject = report_mod.subject_line(run)
+    if critical:
+        subject = f"[CRITICAL] {subject}"
     to_addrs = [r["email"] for r in recipients if r.get("email")]
 
     if not to_addrs:
@@ -242,9 +267,9 @@ def send_sms(run, body=None):
             "body": body, "results": results}
 
 
-def deliver(run):
+def deliver(run, critical=False):
     """Deliver a run over all channels. Returns a combined result."""
-    email_res = send_email(run)
+    email_res = send_email(run, critical=critical)
     sms_res = send_sms(run)
     # Best-effort audit trail in Supabase (no-op in file mode / on any error).
     try:

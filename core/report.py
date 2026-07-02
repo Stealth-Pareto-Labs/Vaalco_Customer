@@ -14,6 +14,7 @@ VAALCO brand: deep navy + signal orange, with clear low/medium/high accents.
 """
 
 import os
+import re
 import html
 import base64
 
@@ -58,6 +59,17 @@ def _logo_data_uri():
 
 def _esc(s):
     return html.escape(str(s if s is not None else ""))
+
+
+def _md(s):
+    """Escape HTML, then render basic inline markdown (bold/italic/code) and
+    newlines — so **bold** and lists in LLM prose show properly in the email."""
+    s = html.escape(str(s if s is not None else ""))
+    s = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s)
+    s = re.sub(r"(?<![\*\w])\*(?!\s)(.+?)(?<!\s)\*(?![\*\w])", r"<em>\1</em>", s)
+    s = re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
+    s = re.sub(r"^\s*[-*]\s+(.+)$", r"• \1", s, flags=re.MULTILINE)
+    return s.replace("\n", "<br>")
 
 
 def subject_line(run):
@@ -107,7 +119,7 @@ def _signal_card(sig):
             </td>
             <td style="text-align:right;color:{MUT};font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;vertical-align:middle;">{_esc(sig["category"])}</td>
           </tr></table>
-          <p style="margin:10px 0 0;color:{INK};font-size:14px;line-height:1.55;">{_esc(sig.get("explanation",""))}</p>
+          <p style="margin:10px 0 0;color:{INK};font-size:14px;line-height:1.55;">{_md(sig.get("explanation",""))}</p>
         </td></tr>
         <tr><td style="padding:2px 18px 6px;">
           <div style="background:{PRI_BG[p]};border-radius:5px;padding:11px 13px;">
@@ -190,7 +202,7 @@ def render_html(run):
     <table role="presentation" width="100%" style="margin-bottom:20px;"><tr>
       <td style="background:#fff;border:1px solid {LINE};border-radius:6px;padding:16px 18px;">
         <div style="color:{ORANGE};font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;">Executive summary</div>
-        <div style="color:{INK};font-size:14.5px;line-height:1.6;">{_esc(run.get("executive_summary",""))}</div>
+        <div style="color:{INK};font-size:14.5px;line-height:1.6;">{_md(run.get("executive_summary",""))}</div>
       </td>
     </tr></table>
 

@@ -129,8 +129,12 @@ class SendBody(BaseModel):
     run_id: str | None = None
 
 
-class AlertEmailBody(BaseModel):
-    email: str
+class SettingsBody(BaseModel):
+    emails: list[str] = []
+    digest_enabled: bool = True
+    digest_time: str = "08:00"
+    timezone: str = "Africa/Libreville"
+    critical_immediate: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -329,22 +333,60 @@ def dashboard(user=Depends(require_auth)):
 # ---------------------------------------------------------------------------
 # Settings — alert recipient email
 # ---------------------------------------------------------------------------
+_SETTINGS_DEFAULTS = {
+    "emails": [], "digest_enabled": True, "digest_time": "08:00",
+    "timezone": "Africa/Libreville", "critical_immediate": True,
+}
+
+
+def _read_settings():
+    cfg = store.get_setting("alert_config") or {}
+    # migrate legacy single-list if present and no emails yet
+    if not cfg.get("emails"):
+        legacy = store.get_setting("alert_recipients") or []
+        cfg["emails"] = [r.get("email") for r in legacy if r.get("email")]
+    return {k: cfg.get(k, v) for k, v in _SETTINGS_DEFAULTS.items()}
+
+
 @app.get("/settings")
 def get_settings(user=Depends(require_auth)):
-    recips = store.get_setting("alert_recipients", []) or []
-    email = recips[0].get("email", "") if recips else ""
-    return {"alert_email": email}
+    return _read_settings()
 
 
-@app.post("/settings/alert-email")
-def set_alert_email(body: AlertEmailBody, user=Depends(require_auth)):
-    email = (body.email or "").strip()
-    if email and ("@" not in email or "." not in email.split("@")[-1]):
-        raise HTTPException(status_code=400, detail="Invalid email address")
-    recips = ([{"name": "Alert recipient", "email": email,
-                "phone": "", "sms_from_priority": "none"}] if email else [])
-    store.set_setting("alert_recipients", recips)
-    return {"alert_email": email}
+@app.post("/settings")
+def save_settings(body: SettingsBody, user=Depends(require_auth)):
+    clean_emails = []
+    for e in body.emails:
+        e = (e or "").strip()
+        if not e:
+            continue
+        if "@" not in e or "." not in e.split("@")[-1]:
+            raise HTTPException(status_code=400, detail=f"Invalid email: {e}")
+        if e not in clean_emails:
+            clean_emails.append(e)
+    # validate timezone
+    try:
+        from zoneinfo import ZoneInfo
+        ZoneInfo(body.timezone)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid timezone")
+    # validate HH:MM
+    try:
+        hh, mm = body.digest_time.split(":")
+        assert 0 <= int(hh) <= 23 and 0 <= int(mm) <= 59
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid digest time (use HH:MM)")
+
+    cfg = store.get_setting("alert_config") or {}
+    cfg.update({
+        "emails": clean_emails,
+        "digest_enabled": body.digest_enabled,
+        "digest_time": body.digest_time,
+        "timezone": body.timezone,
+        "critical_immediate": body.critical_immediate,
+    })
+    store.set_setting("alert_config", cfg)
+    return _read_settings()
 
 
 # ---------------------------------------------------------------------------

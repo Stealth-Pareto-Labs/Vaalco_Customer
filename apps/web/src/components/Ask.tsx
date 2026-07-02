@@ -14,6 +14,7 @@ import { api, ApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/Toast";
 import ChartView from "@/components/ChartView";
+import Markdown from "@/components/Markdown";
 import type { ChartSpec, ChatMessage, TraceItem } from "@/lib/types";
 
 interface ThreadMessage {
@@ -258,9 +259,7 @@ function MessageBubble({
                 ))}
               </div>
             )}
-            <div className="whitespace-pre-wrap text-[15px] leading-relaxed text-ink">
-              {message.content}
-            </div>
+            <Markdown>{message.content}</Markdown>
             {message.charts &&
               message.charts.map((chart, i) => (
                 <ChartView key={i} spec={chart} />

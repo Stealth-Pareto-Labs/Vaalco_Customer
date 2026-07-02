@@ -101,6 +101,14 @@ export interface SendResponse {
   delivery: unknown;
 }
 
+export interface SettingsConfig {
+  emails: string[];
+  digest_enabled: boolean;
+  digest_time: string; // "HH:MM"
+  timezone: string;
+  critical_immediate: boolean;
+}
+
 // ---- Dashboard ----
 export interface FuelPoint {
   date: string;

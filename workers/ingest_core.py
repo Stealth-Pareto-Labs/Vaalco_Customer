@@ -115,8 +115,12 @@ def _parse_bytes(data: bytes, source_file: str):
 
 
 def ingest_bytes(data: bytes, source_file: str, storage_path: str,
-                 vessel_code="NZ-MCT", run_intelligence=True, deliver=False):
-    """Ingest one report given its bytes. Returns a summary dict."""
+                 vessel_code="NZ-MCT", run_intelligence=True, deliver=False,
+                 auto_deliver=True):
+    """Ingest one report given its bytes. Returns a summary dict.
+    Delivery: `deliver=True` forces a send; otherwise, when `auto_deliver` is on,
+    the delivery policy sends critical (HIGH) alerts immediately and holds the
+    rest for the scheduled digest."""
     file_hash = hashlib.sha256(data).hexdigest()
     tenant_id, vessel_id = store.resolve_vessel(vessel_code)
 
@@ -151,18 +155,22 @@ def ingest_bytes(data: bytes, source_file: str, storage_path: str,
         result["counts"] = run["counts"]
         if deliver:
             result["delivery"] = notify.deliver(run)
+        elif auto_deliver:
+            # critical (HIGH) signals go out now; medium/low wait for the digest
+            result["delivery"] = notify.apply_delivery_policy(run)
         _ping_api_refresh()
 
     return result
 
 
 def ingest_object(storage_path, vessel_code="NZ-MCT",
-                  run_intelligence=True, deliver=False):
+                  run_intelligence=True, deliver=False, auto_deliver=True):
     """Ingest a file already present in the raw-reports bucket."""
     data = download_object(config.SUPABASE_BUCKET_RAW, storage_path)
     return ingest_bytes(data, os.path.basename(storage_path), storage_path,
                         vessel_code=vessel_code,
-                        run_intelligence=run_intelligence, deliver=deliver)
+                        run_intelligence=run_intelligence, deliver=deliver,
+                        auto_deliver=auto_deliver)
 
 
 def seed_sample_reports(local_dir, vessel_code="NZ-MCT", deliver=False):
@@ -179,5 +187,5 @@ def seed_sample_reports(local_dir, vessel_code="NZ-MCT", deliver=False):
         last = (i == len(files) - 1)
         summaries.append(ingest_bytes(
             data, name, storage_path, vessel_code=vessel_code,
-            run_intelligence=last, deliver=(deliver and last)))
+            run_intelligence=last, deliver=(deliver and last), auto_deliver=False))
     return {"ingested": len(files), "final": summaries[-1] if summaries else None}
