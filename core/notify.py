@@ -57,8 +57,26 @@ def _log_email_to_disk(run, html_body, text_body, recipients, reason):
     return stem + ".html"
 
 
+def _send_via_resend(html_body, text_body, to_addrs, subject):
+    """Send one email to all recipients via the Resend REST API (urllib, no SDK)."""
+    body = json.dumps({
+        "from": config.EMAIL_FROM,
+        "to": to_addrs,
+        "subject": subject,
+        "html": html_body,
+        "text": text_body,
+    }).encode()
+    req = urllib.request.Request(
+        "https://api.resend.com/emails", data=body, method="POST",
+        headers={"Authorization": f"Bearer {config.RESEND_API_KEY}",
+                 "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read())
+
+
 def send_email(run, html_body=None, text_body=None):
     """Send (or, if unconfigured, save) the full report email to all recipients.
+    Prefers Resend, falls back to SMTP, and simulates if neither is configured.
     Returns a result dict describing what happened."""
     html_body = html_body if html_body is not None else report_mod.render_html(run)
     text_body = text_body if text_body is not None else report_mod.render_text(run)
@@ -68,6 +86,21 @@ def send_email(run, html_body=None, text_body=None):
 
     if not to_addrs:
         return {"channel": "email", "sent": False, "detail": "No recipients configured."}
+
+    # --- Preferred: Resend transactional email ---
+    if config.resend_configured():
+        try:
+            resp = _send_via_resend(html_body, text_body, to_addrs, subject)
+            print(f"  · EMAIL sent via Resend to {', '.join(to_addrs)} (id {resp.get('id')})")
+            return {"channel": "email", "sent": True, "provider": "resend",
+                    "id": resp.get("id"), "to": to_addrs, "subject": subject}
+        except (urllib.error.HTTPError, urllib.error.URLError, OSError) as e:
+            detail = e.read().decode(errors="replace") if hasattr(e, "read") else str(e)
+            path = _log_email_to_disk(run, html_body, text_body, recipients, f"resend failed: {detail}")
+            print(f"  ! EMAIL send via Resend failed ({detail}). Saved to {path}")
+            return {"channel": "email", "sent": False, "provider": "resend",
+                    "error": str(detail)[:300], "saved_to": path,
+                    "detail": "Resend send failed — email saved to outbox."}
 
     if not config.smtp_configured():
         path = _log_email_to_disk(run, html_body, text_body, recipients,
@@ -200,4 +233,16 @@ def deliver(run):
     """Deliver a run over all channels. Returns a combined result."""
     email_res = send_email(run)
     sms_res = send_sms(run)
+    # Best-effort audit trail in Supabase (no-op in file mode / on any error).
+    try:
+        import store
+        e_status = "sent" if email_res.get("sent") else ("simulated" if email_res.get("simulated") else "failed")
+        store.log_notification("email", email_res.get("to", []), e_status,
+                               detail=email_res.get("detail") or email_res.get("subject"),
+                               run_id=run.get("run_id"))
+        s_status = "sent" if sms_res.get("sent") else ("simulated" if sms_res.get("simulated") else "failed")
+        store.log_notification("sms", sms_res.get("to", []), s_status,
+                               detail=sms_res.get("detail"), run_id=run.get("run_id"))
+    except Exception:
+        pass
     return {"email": email_res, "sms": sms_res}
