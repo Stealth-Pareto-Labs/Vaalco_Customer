@@ -9,7 +9,7 @@ import {
   forwardRef
 } from "react";
 import type { FormEvent } from "react";
-import { Send } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/Toast";
@@ -203,7 +203,11 @@ const Ask = forwardRef<AskHandle>(function Ask(_props, ref) {
             disabled={loading || input.trim().length === 0}
             className="focus-ring flex shrink-0 cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-[15px] font-medium text-white transition-colors duration-150 hover:bg-primary-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Send size={16} aria-hidden="true" />
+            {loading ? (
+              <Loader2 size={16} className="spin" aria-hidden="true" />
+            ) : (
+              <Send size={16} aria-hidden="true" />
+            )}
             <span className="hidden sm:inline">{t("ask.send")}</span>
           </button>
         </form>
@@ -235,11 +239,9 @@ function MessageBubble({
     <div className="flex justify-start">
       <div className="max-w-[92%] rounded-2xl rounded-bl-sm border border-line bg-surface px-4 py-3">
         {message.pending ? (
-          <div className="flex items-center gap-2 py-0.5" aria-live="polite">
-            <span className="sr-only">{thinkingLabel}</span>
-            <span className="typing-dot" />
-            <span className="typing-dot" />
-            <span className="typing-dot" />
+          <div className="flex items-center gap-2 py-0.5 text-[14px] text-mut" aria-live="polite">
+            <Loader2 size={16} className="spin text-primary" aria-hidden="true" />
+            <span>{thinkingLabel}…</span>
           </div>
         ) : (
           <>

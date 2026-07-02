@@ -33,6 +33,19 @@ import report as report_mod
 _PRI_RANK = {"none": 0, "low": 1, "medium": 2, "high": 3}
 
 
+def _recipients():
+    """Alert recipients: the UI-configured list (app_settings) if present,
+    otherwise the env/config fallback."""
+    try:
+        import store
+        configured = store.get_setting("alert_recipients")
+        if isinstance(configured, list) and configured:
+            return configured
+    except Exception:
+        pass
+    return config.RECIPIENTS
+
+
 def _outbox_dir():
     d = os.path.join(config.REPORTS_OUT_DIR, "outbox")
     os.makedirs(d, exist_ok=True)
@@ -80,7 +93,7 @@ def send_email(run, html_body=None, text_body=None):
     Returns a result dict describing what happened."""
     html_body = html_body if html_body is not None else report_mod.render_html(run)
     text_body = text_body if text_body is not None else report_mod.render_text(run)
-    recipients = config.RECIPIENTS
+    recipients = _recipients()
     subject = report_mod.subject_line(run)
     to_addrs = [r["email"] for r in recipients if r.get("email")]
 

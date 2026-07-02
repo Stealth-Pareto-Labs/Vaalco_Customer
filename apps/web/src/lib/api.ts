@@ -138,6 +138,17 @@ export const api = {
       method: "POST",
       body: { run_id: runId }
     });
+  },
+
+  getSettings(): Promise<{ alert_email: string }> {
+    return request<{ alert_email: string }>("/settings");
+  },
+
+  setAlertEmail(email: string): Promise<{ alert_email: string }> {
+    return request<{ alert_email: string }>("/settings/alert-email", {
+      method: "POST",
+      body: { email }
+    });
   }
 };
 

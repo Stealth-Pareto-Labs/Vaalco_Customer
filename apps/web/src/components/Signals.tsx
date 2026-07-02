@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { RefreshCw, Mail, Send, AlertTriangle } from "lucide-react";
+import { RefreshCw, Mail, Send, AlertTriangle, Loader2 } from "lucide-react";
 import { api, ApiError, previewUrl } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/components/Toast";
@@ -190,7 +190,8 @@ export default function Signals({ active, onProbe, onHighCount }: SignalsProps) 
       </div>
 
       {loading && !run ? (
-        <div className="rounded-xl border border-line bg-surface px-4 py-10 text-center text-[14px] text-mut">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-line bg-surface px-4 py-14 text-center text-[14px] text-mut">
+          <Loader2 size={26} className="spin text-primary" aria-hidden="true" />
           {t("signals.loading")}
         </div>
       ) : error && !run ? (

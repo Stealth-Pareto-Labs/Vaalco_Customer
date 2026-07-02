@@ -128,6 +128,10 @@ class SendBody(BaseModel):
     run_id: str | None = None
 
 
+class AlertEmailBody(BaseModel):
+    email: str
+
+
 # ---------------------------------------------------------------------------
 # Public endpoints
 # ---------------------------------------------------------------------------
@@ -216,6 +220,27 @@ def signals_preview(run_id: str, token: str = ""):
         run = intelligence.run(trigger="preview")
         store.save_run(run)
     return HTMLResponse(report_mod.render_html(run))
+
+
+# ---------------------------------------------------------------------------
+# Settings — alert recipient email
+# ---------------------------------------------------------------------------
+@app.get("/settings")
+def get_settings(user=Depends(require_auth)):
+    recips = store.get_setting("alert_recipients", []) or []
+    email = recips[0].get("email", "") if recips else ""
+    return {"alert_email": email}
+
+
+@app.post("/settings/alert-email")
+def set_alert_email(body: AlertEmailBody, user=Depends(require_auth)):
+    email = (body.email or "").strip()
+    if email and ("@" not in email or "." not in email.split("@")[-1]):
+        raise HTTPException(status_code=400, detail="Invalid email address")
+    recips = ([{"name": "Alert recipient", "email": email,
+                "phone": "", "sms_from_priority": "none"}] if email else [])
+    store.set_setting("alert_recipients", recips)
+    return {"alert_email": email}
 
 
 # ---------------------------------------------------------------------------

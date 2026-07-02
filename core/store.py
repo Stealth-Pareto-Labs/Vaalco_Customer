@@ -193,6 +193,23 @@ def record_raw_report(source_file, storage_path, file_hash, report_date=None,
     return created[0]["id"] if created else None
 
 
+def get_setting(key, default=None, tenant_id=DEFAULT_TENANT_ID):
+    if not _supabase():
+        return default
+    rows = _get("app_settings",
+                f"tenant_id=eq.{tenant_id}&key=eq.{key}&select=value&limit=1")
+    return rows[0]["value"] if rows else default
+
+
+def set_setting(key, value, tenant_id=DEFAULT_TENANT_ID):
+    if not _supabase():
+        return None
+    _insert("app_settings",
+            {"tenant_id": tenant_id, "key": key, "value": value},
+            upsert_on="tenant_id,key")
+    return value
+
+
 def log_notification(channel, recipients, status, detail=None, run_id=None,
                      vessel_id=DEFAULT_VESSEL_ID, tenant_id=DEFAULT_TENANT_ID):
     if not _supabase():

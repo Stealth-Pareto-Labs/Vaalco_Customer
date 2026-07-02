@@ -11,7 +11,7 @@ import Signals from "@/components/Signals";
 export default function DashboardPage() {
   const router = useRouter();
   const [ready, setReady] = useState(false);
-  const [tab, setTab] = useState<TabKey>("ask");
+  const [tab, setTab] = useState<TabKey>("signals");
   const [days, setDays] = useState(0);
   const [connected, setConnected] = useState(true);
   const [highCount, setHighCount] = useState(0);

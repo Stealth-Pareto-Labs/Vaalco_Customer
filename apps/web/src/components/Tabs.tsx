@@ -16,8 +16,8 @@ export default function Tabs({ active, onChange, highCount }: TabsProps) {
   const { t } = useI18n();
 
   const tabs: { key: TabKey; label: string; icon: ReactNode }[] = [
-    { key: "ask", label: t("tab.ask"), icon: <MessageSquare size={16} /> },
-    { key: "signals", label: t("tab.signals"), icon: <Activity size={16} /> }
+    { key: "signals", label: t("tab.signals"), icon: <Activity size={16} /> },
+    { key: "ask", label: t("tab.ask"), icon: <MessageSquare size={16} /> }
   ];
 
   return (
