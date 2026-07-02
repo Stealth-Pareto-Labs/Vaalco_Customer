@@ -1,0 +1,58 @@
+name: deploy
+
+# Continuous deployment on push to main. Each job is a no-op unless its
+# platform secrets are present, so the pipeline is safe before everything is wired.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # --- Frontend -> Vercel ---
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then echo "VERCEL_TOKEN not set — skipping"; exit 0; fi
+          cd apps/web
+          npm i -g vercel@latest
+          vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+          vercel build --prod --token "$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN"
+
+  # --- Workers -> Modal ---
+  workers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Deploy to Modal
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          if [ -z "$MODAL_TOKEN_ID" ]; then echo "MODAL_TOKEN_ID not set — skipping"; exit 0; fi
+          pip install modal
+          modal deploy workers/modal_app.py
+
+  # --- API -> Render (deploy hook) ---
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then echo "RENDER_DEPLOY_HOOK not set — skipping"; exit 0; fi
+          curl -fsSL -X POST "$RENDER_DEPLOY_HOOK"
