@@ -116,14 +116,14 @@ export const api = {
     });
   },
 
-  signalsLatest(): Promise<Run> {
-    return request<Run>("/signals/latest");
+  signalsLatest(lang: string = "en"): Promise<Run> {
+    return request<Run>(`/signals/latest?lang=${encodeURIComponent(lang)}`);
   },
 
-  signalsRun(trigger: string, deliver: boolean): Promise<RunResponse> {
+  signalsRun(trigger: string, deliver: boolean, lang: string = "en"): Promise<RunResponse> {
     return request<RunResponse>("/signals/run", {
       method: "POST",
-      body: { trigger, deliver }
+      body: { trigger, deliver, lang }
     });
   },
 

@@ -123,6 +123,7 @@ class AskBody(BaseModel):
 class RunBody(BaseModel):
     trigger: str = "manual"
     deliver: bool = False
+    lang: str = "en"
 
 
 class SendBody(BaseModel):
@@ -176,15 +177,15 @@ def ask(body: AskBody, user=Depends(require_auth)):
 # Signals
 # ---------------------------------------------------------------------------
 @app.get("/signals/latest")
-def signals_latest(user=Depends(require_auth)):
+def signals_latest(lang: str = "en", user=Depends(require_auth)):
     ensure_loaded()
-    return intelligence.run(trigger="view: console open")
+    return intelligence.run(trigger="view: console open", lang=lang)
 
 
 @app.post("/signals/run")
 def signals_run(body: RunBody, user=Depends(require_auth)):
     ensure_loaded()
-    run = intelligence.run(trigger=body.trigger)
+    run = intelligence.run(trigger=body.trigger, lang=body.lang)
     store.save_run(run)
     delivery = notify.deliver(run) if body.deliver else None
     return {"run_id": run["run_id"], "run": run, "delivery": delivery}

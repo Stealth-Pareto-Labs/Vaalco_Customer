@@ -90,7 +90,28 @@ def _default_next_steps(sig):
     return base.get(cat, ["Review this item and assign an owner."])
 
 
-def _call_model(payload_signals, context):
+_LANG_NAMES = {"en": "English", "fr": "French"}
+
+
+def _lang_directive(lang):
+    """Extra system instruction to produce the run in a non-English language.
+    Numbers/units/dates are NEVER translated — only labels and prose."""
+    if not lang or lang == "en":
+        return ""
+    name = _LANG_NAMES.get(lang, lang)
+    return (
+        f"\n\nLANGUAGE — write ALL prose in {name}. In addition to explanation and "
+        f"next_steps, for EACH signal also return:\n"
+        f'  - "title": the signal\'s title translated to {name} '
+        f"(keep machine names/codes/identifiers exactly as given).\n"
+        f'  - "evidence_labels": an array of the evidence "label" strings translated to {name}, '
+        f"in the SAME order as the evidence you were given.\n"
+        f"Write executive_summary in {name} too. NEVER translate or change any number, unit, "
+        f"date, code, or machine identifier — only labels and prose."
+    )
+
+
+def _call_model(payload_signals, context, lang="en"):
     """Ask the model for summary + explanations + next steps. Returns dict or None."""
     if not config.api_key_present():
         return None
@@ -106,7 +127,7 @@ def _call_model(payload_signals, context):
         "context": context,
         "signals": slim,
     }
-    system = _SYNTH_SYSTEM.format(operator=config.OPERATOR_NAME)
+    system = _SYNTH_SYSTEM.format(operator=config.OPERATOR_NAME) + _lang_directive(lang)
     # Transport is provider-abstracted (llm.py); the prompt and the strict
     # JSON contract above are unchanged. Returns a dict or None (fallback).
     return llm.complete_json(system, json.dumps(user), config.INTEL_MAX_TOKENS)
@@ -132,7 +153,7 @@ def _deterministic_summary(detection):
             f"{detection['as_of']}. Attend first to: {headline['title'].lower()}.")
 
 
-def run(trigger="manual"):
+def run(trigger="manual", lang="en"):
     """Perform a full intelligence run against the current data store."""
     detection = signals.detect_all()
     ts = datetime.datetime.now()
@@ -157,10 +178,13 @@ def run(trigger="manual"):
         "counts": detection["counts"],
     }
 
-    model_out = _call_model(detection["signals"], context)
+    model_out = _call_model(detection["signals"], context, lang=lang)
     used_model = model_out is not None
+    localize = used_model and lang and lang != "en"
 
-    # Merge model prose onto the deterministic signals (evidence is untouched)
+    # Merge model prose onto the deterministic signals. Numbers/values are NEVER
+    # taken from the model — only prose (explanation/next_steps) and, when
+    # localizing, the translated title and evidence LABELS (values stay verbatim).
     by_id = {}
     if used_model:
         for entry in (model_out.get("signals") or []):
@@ -174,7 +198,17 @@ def run(trigger="manual"):
         next_steps = m.get("next_steps") if isinstance(m.get("next_steps"), list) else None
         if not next_steps:
             next_steps = _default_next_steps(s)
-        enriched.append({**s, "explanation": explanation, "next_steps": next_steps})
+        item = {**s, "explanation": explanation, "next_steps": next_steps}
+        if localize:
+            if (m.get("title") or "").strip():
+                item["title"] = m["title"].strip()
+            labels = m.get("evidence_labels")
+            if isinstance(labels, list) and len(labels) == len(s.get("evidence", [])):
+                item["evidence"] = [
+                    {"label": (labels[i] or ev.get("label")), "value": ev.get("value")}
+                    for i, ev in enumerate(s["evidence"])
+                ]
+        enriched.append(item)
 
     exec_summary = ""
     if used_model:

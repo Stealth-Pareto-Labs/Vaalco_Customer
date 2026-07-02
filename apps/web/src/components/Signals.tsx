@@ -50,7 +50,7 @@ export default function Signals({ active, onProbe, onHighCount }: SignalsProps) 
     setLoading(true);
     setError(null);
     try {
-      const r = await api.signalsLatest();
+      const r = await api.signalsLatest(locale);
       setRunAndCount(r);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : t("common.error");
@@ -58,7 +58,7 @@ export default function Signals({ active, onProbe, onHighCount }: SignalsProps) 
     } finally {
       setLoading(false);
     }
-  }, [setRunAndCount, t]);
+  }, [setRunAndCount, t, locale]);
 
   useEffect(() => {
     if (active && !loadedOnce.current) {
@@ -68,10 +68,16 @@ export default function Signals({ active, onProbe, onHighCount }: SignalsProps) 
     }
   }, [active, loadLatest, loadHistory]);
 
+  // Re-generate the report in the new language when the user switches locale.
+  useEffect(() => {
+    if (active && loadedOnce.current) void loadLatest();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale]);
+
   const handleRerun = useCallback(async () => {
     setRerunning(true);
     try {
-      const res = await api.signalsRun("manual: re-run", false);
+      const res = await api.signalsRun("manual: re-run", false, locale);
       setRunAndCount(res.run);
       await loadHistory();
       toast(t("toast.rerunDone"), "success");
@@ -81,14 +87,14 @@ export default function Signals({ active, onProbe, onHighCount }: SignalsProps) 
     } finally {
       setRerunning(false);
     }
-  }, [loadHistory, setRunAndCount, t, toast]);
+  }, [loadHistory, setRunAndCount, t, toast, locale]);
 
   const handlePreview = useCallback(async () => {
     let id = run?.run_id ?? null;
     if (!id) {
       setPreviewing(true);
       try {
-        const res = await api.signalsRun("manual: preview", false);
+        const res = await api.signalsRun("manual: preview", false, locale);
         setRunAndCount(res.run);
         await loadHistory();
         id = res.run_id;
@@ -106,7 +112,7 @@ export default function Signals({ active, onProbe, onHighCount }: SignalsProps) 
     } else {
       toast(t("toast.previewError"), "error");
     }
-  }, [run, loadHistory, setRunAndCount, t, toast]);
+  }, [run, loadHistory, setRunAndCount, t, toast, locale]);
 
   const handleSend = useCallback(async () => {
     setSending(true);

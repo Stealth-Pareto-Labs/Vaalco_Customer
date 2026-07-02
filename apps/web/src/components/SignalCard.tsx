@@ -48,7 +48,9 @@ export default function SignalCard({ signal, onProbe }: SignalCardProps) {
           </span>
           {signal.category && (
             <span className="truncate text-right text-[12px] font-medium uppercase tracking-wide text-mut">
-              {signal.category}
+              {t(`signals.cat.${signal.category}`) !== `signals.cat.${signal.category}`
+                ? t(`signals.cat.${signal.category}`)
+                : signal.category}
             </span>
           )}
         </div>
