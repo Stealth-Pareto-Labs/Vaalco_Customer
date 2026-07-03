@@ -16,7 +16,7 @@ import hashlib
 import config
 
 _ALG = "HS256"
-_TTL_SECONDS = 60 * 60 * 12   # 12h sessions
+_TTL_SECONDS = 60 * 60 * 24 * 7   # 7-day sessions
 
 
 def _b64(data: bytes) -> str:

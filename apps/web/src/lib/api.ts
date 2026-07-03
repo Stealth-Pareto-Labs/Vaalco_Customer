@@ -86,6 +86,16 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     } catch {
       // ignore body parse errors
     }
+    // Session expired / invalid on an authenticated request -> re-login.
+    if (res.status === 401 && auth) {
+      clearToken();
+      if (
+        typeof window !== "undefined" &&
+        !window.location.pathname.startsWith("/login")
+      ) {
+        window.location.href = "/login";
+      }
+    }
     throw new ApiError(res.status, detail);
   }
 
