@@ -61,9 +61,9 @@ ANTHROPIC_MODEL = _env("ANTHROPIC_MODEL", "claude-sonnet-5")
 # provider's model so nothing downstream changes.
 MODEL = ANTHROPIC_MODEL if LLM_PROVIDER == "anthropic" else OPENAI_MODEL
 
-MAX_TOKENS = _env_int("MAX_TOKENS", 1024)
+MAX_TOKENS = _env_int("MAX_TOKENS", 4096)          # chat answer length cap
 MAX_TOOL_ROUNDS = _env_int("MAX_TOOL_ROUNDS", 6)   # safety cap on the tool loop per question
-INTEL_MAX_TOKENS = _env_int("INTEL_MAX_TOKENS", 2048)
+INTEL_MAX_TOKENS = _env_int("INTEL_MAX_TOKENS", 4096)   # Signals report length cap
 
 
 # ---- Data settings --------------------------------------------------------
